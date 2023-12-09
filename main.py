@@ -34,20 +34,19 @@ def lines(lines_color):
         line_y += 70
 
 
-
 def bullet(color, position):
-    line_length = 650
-    gap_length = 5
     current_pos = position
+    line_length = 650
+    gap_length = 1
 
     while line_length > 0:
         pygame.draw.line(screen, color, current_pos, (current_pos[0] - gap_length, current_pos[1]))
         pygame.draw.line(screen, white, current_pos, (current_pos[0] - gap_length, current_pos[1]))
-        pygame.time.delay(100)
+        pygame.time.delay(25)
 
         # Posun na další pozici
         current_pos = (current_pos[0] - gap_length * 2, current_pos[1])
-        line_length -= gap_length * 2
+        line_length -= gap_length * 5
         print(line_length)
         pygame.display.flip()
 
@@ -69,7 +68,7 @@ while lets_continue:
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 print(event)
-                bullet(yellow, (tank_image_rect.x, tank_image_rect.y))
+                bullet(yellow, (tank_image_rect.x, tank_image_rect.centery))
                 print("test")
     # Keyboard:
     keys = pygame.key.get_pressed()
@@ -93,5 +92,6 @@ while lets_continue:
 
 # Quit:
 pygame.quit()
+
 
 
