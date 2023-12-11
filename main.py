@@ -1,5 +1,6 @@
 import pygame
 import random
+import time
 
 # Inicializácia:
 pygame.init()
@@ -23,6 +24,20 @@ light_blue = (0, 111, 225)
 yellow = (255, 255, 0)
 orange = (255, 170, 40)
 
+# Score and Time:
+Score = 0
+HighestScore = 0
+start_time = time.time()
+
+# Nastavenie najvyššieho skóre zo súboru
+try:
+    with open("highest_score.txt", "r") as file:
+        HighestScore = int(file.read())
+except FileNotFoundError:
+    pass
+
+# Font:
+game_text_font = pygame.font.SysFont("arial.ttf", 20)
 
 # Názov:
 pygame.display.set_caption("Hra s tankami")
@@ -36,14 +51,11 @@ Monster_list = [
     pygame.image.load("img/Monster6.png"),
 ]
 
-
 # Enemies:
 def monsters(position, monster_image):
     monster_image_rect = monster_image.get_rect()
     monster_image_rect.center = position
-
     screen.blit(monster_image, monster_image_rect)
-
 
 enemy_speed = 1
 position_x = 0
@@ -52,6 +64,7 @@ position_y = random.randint(50, height - 50)
 MONSTER_EVENT = pygame.USEREVENT + 2
 pygame.time.set_timer(MONSTER_EVENT, 5000)  # Čas v milisekundách, nastavte podle potřeby
 monsters_list = []
+
 
 def random_color():
     return (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
@@ -100,9 +113,7 @@ def boom(position):
 # Obraz:
 tank_image = pygame.image.load("img/tank.png")
 tank_image_rect = tank_image.get_rect()
-tank_image_rect.center = (width - width//3, height//2)
-
-tank_position = (tank_image_rect.x, tank_image_rect.centery)
+tank_image_rect.center = (width - width // 3, height // 2)
 
 bullet_image = pygame.image.load("img/bullet.png")
 bullet_image_rect = bullet_image.get_rect()
@@ -145,9 +156,10 @@ while lets_continue:
                 bullet_x = bullet.rect.x
                 bullet_y = bullet.rect.y
         elif event.type == BOOM_EVENT:
-            for projektil in projektily:
+            for projektil in projektily[:]:
                 if projektil.length <= 0 or projektil.rect.x <= 0:
                     boom((projektil.rect.x, projektil.rect.y + projektil.rect.height // 2))
+                    projektily.remove(projektil)
         elif event.type == MONSTER_EVENT:
             monster_image = random.choice(Monster_list)
             monsters_list.append({
@@ -171,12 +183,35 @@ while lets_continue:
     # Vykresli obraz:
     screen.fill(light_blue)
 
-    for projektil in projektily:
+    # Time:
+    current_time = time.time() - start_time
+    minutes = int(current_time // 60)
+    seconds = int(current_time % 60)
+    time_text = f"Time: {minutes:02d}:{seconds:02d}"
+
+    text = f"Score: {Score}           Highest Score: {HighestScore}           Time: {time_text}"
+    game_text = game_text_font.render(text, True, white)
+    screen.blit(game_text, (width//2 - 150, 10))
+
+    for projektil in projektily[:]:
         projektil.draw()
         projektil.move()
         if projektil.length <= 0 or projektil.rect.x <= 0:
-            projektily.remove(projektil)
             boom((projektil.rect.x, projektil.rect.y + projektil.rect.height // 2))
+            projektily.remove(projektil)
+
+    # Detekce kolize mezi střelami a monstry
+    for projektil in projektily:
+        for monster in monsters_list[:]:
+            monster_rect = monster['monster_image'].get_rect()
+            monster_rect.center = (monster['position_x'], monster['position_y'])
+
+            if projektil.rect.colliderect(monster_rect):
+                # Kolize detekována, odstranění střely a monstra
+                projektily.remove(projektil)
+                monsters_list.remove(monster)
+                boom((monster['position_x'], monster['position_y']))
+                Score += 10
 
     for monster in monsters_list:
         position_x = monster['position_x']
@@ -184,8 +219,13 @@ while lets_continue:
         monsters_created_time = monster['created_time']
         position_x += enemy_speed
 
+        monster_image = monster['monster_image']
+        monster_image_rect = monster_image.get_rect()
+        monster_image_rect.center = (position_x, position_y)
+
         if position_x >= width:
             monsters_list.remove(monster)
+            Score -= 10
         else:
             monster['position_x'] = position_x
             monster_image = monster['monster_image']
@@ -202,5 +242,10 @@ while lets_continue:
 # Ukonči:
 pygame.quit()
 
+# Highest Score Save:
+if Score >= HighestScore:
+    HighestScore = Score
+    with open("highest_score.txt", "w") as file:
+        file.write(str(HighestScore))
 
 
