@@ -1,5 +1,6 @@
 import pygame
 import time
+import random
 
 pygame.init()
 
@@ -10,13 +11,35 @@ height = 2340
 screen = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
 fps = 60
-bullet_speed = 5
 
 # Farby:
 white = (255, 255, 255)
 red = (255, 0, 0)
 green = (0, 255, 0)
 blue = (0, 0, 255)
+
+# Enemy:
+	
+class Enemy:
+	def __init__(self, image, position, length,speed, lives):
+		self.image = image
+		self.rect = self.image.get_rect()
+		self.rect.center = position
+		self.length = length
+		self.speed = speed
+		self.lives = lives
+		
+	def draw_enemy(self):
+		screen.blit(self.image, self.rect)
+		
+	def move_enemy(self):
+		self.rect.y += self.speed
+		self.length -= self.speed * 2
+		
+	def reduce_lives(self):
+		self.lives -= 1
+		return self.lives
+
 
 # Bullets:
 	
@@ -49,11 +72,34 @@ scaled_image_rect.topleft = (0, 0)
 
 bullet_image = pygame.image.load("/storage/emulated/0/Android/PyGame/Img/bullet-green-icon.png")
 
+ufo = pygame.image.load("/storage/emulated/0/Android/PyGame/Img/UFO-icon.png")
+ufo1 = pygame.image.load("/storage/emulated/0/Android/PyGame/Img/UFO.png")
 
+enemies_image = [ufo, ufo1]
+
+boss_image = pygame.image.load("/storage/emulated/0/Android/PyGame/Img/boss.png")
+
+boom_image = pygame.image.load("/storage/emulated/0/Android/PyGame/Img/Explosion-icon.png")
+
+def boom(image, position):
+	boom_image_rect = image.get_rect()
+	boom_image_rect.center = position
+	screen.blit(image, boom_image_rect)
+	
 bullets = []
 
-bullet_cooldown = 0.22
+bullet_speed = 5
+bullet_cooldown = 0.2
 last_shot_time = time.time() - bullet_cooldown
+
+enemies = []
+enemy_speed = 2
+enemy_lives = 5
+enemy_cooldown = 2.5
+enemy_boss_cooldown = 35
+last_enemy_time = time.time() - enemy_cooldown
+last_boss_time = time.time() - enemy_boss_cooldown
+boss_lst = []
 
 is_button_pressed = False
 
@@ -96,18 +142,63 @@ while lets_continue:
 		  
 	# Delete bullet:
 		  
-	bullets = [bullet for bullet in bullets if bullet.rect.y + bullet.length > 0]  	
-		  
+	bullets = [bullet for bullet in bullets if bullet.rect.y + bullet.length > 0]  
+	
+	# Vytvoření nového nepřítele, pokud je cooldown vypršený:
+	  
+	enemy_image = random.choice(enemies_image)
+	
+	if current_time - last_enemy_time > enemy_cooldown:
+		enemy = Enemy(enemy_image, (random.randint(50, 1000), -50), 2500, enemy_speed, 5)
+		enemies.append(enemy)
+		last_enemy_time = current_time
+	elif current_time - last_boss_time > enemy_boss_cooldown:
+		boss = Enemy(boss_image, (random.randint(50, 1000), -50), 2500, 1, 20)
+		boss_lst.append(boss)
+		last_boss_time = current_time
+	
+	for bullet in bullets[:]:
+		for enemy in enemies[:]:
+			if enemy.rect.colliderect(bullet.rect):
+				remaining_lives = enemy.reduce_lives()
+				if remaining_lives <= 0:
+					enemies.remove(enemy)
+					boom(boom_image, enemy.rect.center)
+				bullets.remove(bullet)
+				
+	for bullet in bullets[:]:
+		for boss in boss_lst:
+			if boss.rect.colliderect(bullet.rect):
+				remaining_lives = boss.reduce_lives()
+				bullets.remove(bullet)
+				if remaining_lives <= 0:
+					boss_lst.remove(boss)		
+
+    # Pohyb nepřátel:
+	for enemy in enemies:
+		enemy.move_enemy()
+		
+	for boss in boss_lst:
+			  boss.move_enemy()
+			  
     # Vkladanie obrazkov:
 	
 	screen.fill(white)
+	#screen.blit(boom_image, boom_image_rect)
 	screen.blit(scaled_image, scaled_image_rect)
 	screen.blit(ship_image,ship_image_rect)
 	
-	# Vykteslenie bullet:
+	# Vykreslenie bullet:
 		
 	for bullet in bullets:
 		bullet.draw()
+		
+    # Vykreslení nepřátel:
+	for enemy in enemies:
+		enemy.draw_enemy()
+		
+	for boss in boss_lst:
+		boss.draw_enemy()
 		
 	
 	
