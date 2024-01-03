@@ -72,6 +72,22 @@ class Bullet:
     def move(self):
         self.rect.y -= self.speed
         self.length -= self.speed * 2
+        
+# Explosion:
+        
+class Explosion:
+    def __init__(self, image, position, duration):
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.center = position
+        self.duration = duration
+        self.start_time = time.time()
+
+    def draw(self):
+        screen.blit(self.image, self.rect)
+
+    def is_expired(self):
+        return time.time() - self.start_time > self.duration
 
 # Obrazky:
 	
@@ -80,12 +96,17 @@ ship_image_rect = ship_image.get_rect()
 ship_image_rect.centerx = width//2
 ship_image_rect.centery = 2000
 
-backround_image = pygame.image.load("/storage/emulated/0/Android/PyGame/Img/Vesmir5.jpeg")
+background_options = ["Vesmir1.jpeg", "Vesmir2.jpeg", "Vesmir3.jpeg", "Vesmir4.jpeg", "Vesmir5.jpeg"]
+
+selected_background = random.choice(background_options)
+
+backround_image = pygame.image.load(f"/storage/emulated/0/Android/PyGame/Img/{selected_background}")
+
 scaled_image = pygame.transform.scale(backround_image, (1080, 2340))
 scaled_image_rect = backround_image.get_rect()
 scaled_image_rect.topleft = (0, 0)
 
-bullet_image = pygame.image.load("/storage/emulated/0/Android/PyGame/Img/bullet-green-icon.png")
+bullet_image = pygame.image.load("/storage/emulated/0/Android/PyGame/Img/Bullet_green.png")
 
 ufo = pygame.image.load("/storage/emulated/0/Android/PyGame/Img/UFO-icon.png")
 ufo1 = pygame.image.load("/storage/emulated/0/Android/PyGame/Img/UFO.png")
@@ -94,18 +115,23 @@ enemies_image = [ufo, ufo1]
 
 boss_image = pygame.image.load("/storage/emulated/0/Android/PyGame/Img/boss.png")
 
+explosion_image = pygame.image.load("/storage/emulated/0/Android/PyGame/Img/fire-big-icon.png")
+
 boom_image = pygame.image.load("/storage/emulated/0/Android/PyGame/Img/Explosion-icon.png")
+
+explosions = []
 	
 bullets = []
 
-bullet_speed = 4.5
-bullet_cooldown = 0.25
+bullet_speed = 4
+bullet_cooldown = 0.29
 last_shot_time = time.time() - bullet_cooldown
 
 enemies = []
 enemy_speed = 1.7
 enemy_lives = 5
 enemy_cooldown = 2.6
+enemy_boss_speed = 1
 enemy_boss_cooldown = 35
 last_enemy_time = time.time() - enemy_cooldown
 last_boss_time = time.time() - enemy_boss_cooldown
@@ -163,7 +189,7 @@ while lets_continue:
 		enemies.append(enemy)
 		last_enemy_time = current_time
 	elif current_time - last_boss_time > enemy_boss_cooldown:
-		boss = Enemy(boss_image, (random.randint(50, 1000), -50), 2500, 1, 20)
+		boss = Enemy(boss_image, (random.randint(50, 1000), -50), 2500, enemy_boss_speed, 15)
 		boss_lst.append(boss)
 		last_boss_time = current_time
 	
@@ -171,9 +197,14 @@ while lets_continue:
 		for enemy in enemies[:]:
 			if enemy.rect.colliderect(bullet.rect):
 				remaining_lives = enemy.reduce_lives()
+				# Přidání exploze při kolizi
+				explosion = Explosion(explosion_image, enemy.rect.center, 0.5)
+				explosions.append(explosion)
 				if remaining_lives <= 0:
 					enemies.remove(enemy)
 					score += 1
+					explosion = Explosion(boom_image, enemy.rect.center, 0.2)
+					explosions.append(explosion)
 				bullets.remove(bullet)
 				
 	for bullet in bullets[:]:
@@ -181,9 +212,14 @@ while lets_continue:
 			if boss.rect.colliderect(bullet.rect):
 				remaining_lives = boss.reduce_lives()
 				bullets.remove(bullet)
+				# Přidání exploze při kolizi s bossem
+				explosion = Explosion(explosion_image, boss.rect.center, 1.0)
+				explosions.append(explosion)
 				if remaining_lives <= 0:
 					boss_lst.remove(boss)	
 					score += 5
+					explosion = Explosion(boom_image, boss.rect.center, 0.2)
+					explosions.append(explosion)
 
     # Pohyb nepřátel:
 	for enemy in enemies:
@@ -195,7 +231,6 @@ while lets_continue:
     # Vkladanie obrazkov:
 	
 	screen.fill(white)
-	#screen.blit(boom_image, boom_image_rect)
 	screen.blit(scaled_image, scaled_image_rect)
 	screen.blit(ship_image,ship_image_rect)
 	
@@ -221,7 +256,15 @@ while lets_continue:
 	for boss in boss_lst:
 		boss.draw_enemy()
 		
-
+	for explosion in explosions[:]:
+		explosion.draw()
+		if explosion.is_expired():
+			explosions.remove(explosion)
+		
+	if score > 25:
+		bullet_cooldown = 0.22
+	if score > 50:
+		bullet_cooldown = 0.18
 	
 	# Update Obrazovky:
 		
