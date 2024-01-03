@@ -12,11 +12,26 @@ screen = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
 fps = 60
 
+score = 0
+HighestScore = 0
+start_time = time.time()
+
+# Nastavenie najvyššieho skóre zo súboru
+try:
+    with open("highest_score.txt", "r") as file:
+        data = file.read()
+        HighestScore = int(data) if data else 0
+except FileNotFoundError:
+    pass
+
 # Farby:
 white = (255, 255, 255)
 red = (255, 0, 0)
 green = (0, 255, 0)
 blue = (0, 0, 255)
+
+# Font a Texty:
+game_text_font = pygame.font.SysFont("arial", 36)
 
 # Enemy:
 	
@@ -65,7 +80,7 @@ ship_image_rect = ship_image.get_rect()
 ship_image_rect.centerx = width//2
 ship_image_rect.centery = 2000
 
-backround_image = pygame.image.load("/storage/emulated/0/Android/PyGame/Img/vesmir.jpeg")
+backround_image = pygame.image.load("/storage/emulated/0/Android/PyGame/Img/Vesmir5.jpeg")
 scaled_image = pygame.transform.scale(backround_image, (1080, 2340))
 scaled_image_rect = backround_image.get_rect()
 scaled_image_rect.topleft = (0, 0)
@@ -80,22 +95,17 @@ enemies_image = [ufo, ufo1]
 boss_image = pygame.image.load("/storage/emulated/0/Android/PyGame/Img/boss.png")
 
 boom_image = pygame.image.load("/storage/emulated/0/Android/PyGame/Img/Explosion-icon.png")
-
-def boom(image, position):
-	boom_image_rect = image.get_rect()
-	boom_image_rect.center = position
-	screen.blit(image, boom_image_rect)
 	
 bullets = []
 
-bullet_speed = 5
-bullet_cooldown = 0.2
+bullet_speed = 4.5
+bullet_cooldown = 0.25
 last_shot_time = time.time() - bullet_cooldown
 
 enemies = []
-enemy_speed = 2
+enemy_speed = 1.7
 enemy_lives = 5
-enemy_cooldown = 2.5
+enemy_cooldown = 2.6
 enemy_boss_cooldown = 35
 last_enemy_time = time.time() - enemy_cooldown
 last_boss_time = time.time() - enemy_boss_cooldown
@@ -111,7 +121,7 @@ while lets_continue:
 	current_time = time.time()
 	
 	for event in pygame.event.get():
-		if event.type == pygame.QUIT:
+		if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN  and event.key == pygame.K_ESCAPE):
 			lets_continue = False
 		
 		# Ovladanie:
@@ -163,16 +173,17 @@ while lets_continue:
 				remaining_lives = enemy.reduce_lives()
 				if remaining_lives <= 0:
 					enemies.remove(enemy)
-					boom(boom_image, enemy.rect.center)
+					score += 1
 				bullets.remove(bullet)
 				
 	for bullet in bullets[:]:
-		for boss in boss_lst:
+		for boss in boss_lst[:]:
 			if boss.rect.colliderect(bullet.rect):
 				remaining_lives = boss.reduce_lives()
 				bullets.remove(bullet)
 				if remaining_lives <= 0:
-					boss_lst.remove(boss)		
+					boss_lst.remove(boss)	
+					score += 5
 
     # Pohyb nepřátel:
 	for enemy in enemies:
@@ -188,6 +199,16 @@ while lets_continue:
 	screen.blit(scaled_image, scaled_image_rect)
 	screen.blit(ship_image,ship_image_rect)
 	
+	 # Time:
+	current_time = time.time() - start_time
+	minutes = int(current_time // 60)
+	seconds = int(current_time % 60)
+	time_text = f"{minutes:02d}:{seconds:02d}"
+
+	text = f"Score: {score}                           Time: {time_text}             Highest Score: {HighestScore}"
+	game_text = game_text_font.render(text, True, white)
+	screen.blit(game_text, (50 , 50))
+	
 	# Vykreslenie bullet:
 		
 	for bullet in bullets:
@@ -200,7 +221,7 @@ while lets_continue:
 	for boss in boss_lst:
 		boss.draw_enemy()
 		
-	
+
 	
 	# Update Obrazovky:
 		
@@ -209,3 +230,9 @@ while lets_continue:
 	clock.tick(fps)
 
 pygame.quit()
+
+# Highest Score Save:
+if score >= HighestScore:
+    HighestScore = score
+    with open("highest_score.txt", "w") as file:
+        file.write(str(HighestScore))
